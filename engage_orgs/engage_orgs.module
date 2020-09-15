@@ -1,0 +1,144 @@
+<?php
+
+/**
+ * @file
+ * aggregates data from engage into an end point to used for student orgs
+ */
+
+/**
+ * Implements hook permission.
+ */
+function engage_orgs_permission() {
+  return [
+    'administer engage_orgs' => [
+      'title' => t('Can accesses and change engage end-point'),
+      'description' => t('Allows users to access the end-point for engage\'s accesses point and edit key values'),
+    ],
+  ];
+}
+
+/**
+ * Implements hook menu.
+ */
+function engage_orgs_menu() {
+  $items = [];
+  $items['admin/config/engage/orgs'] = [
+    'title' => 'Student Org Engage Config',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['engage_orgs_form'],
+    'access arguments' => ['administer engage_orgs'],
+    'type' => MENU_NORMAL_ITEM,
+  ];
+  $items['admin/engage/api'] = [
+    'page callback' => '_engage_orgs_api',
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+  ];
+  return $items;
+}
+
+/**
+ * Validates the form using validate hook.
+ */
+function engage_orgs_form_validate($form, &$form_state) {
+  $api_key = $form_state['values']['engage_org_api_key'];
+  if (empty($api_key)) {
+    form_set_error('engage_org_api_key', t('You must enter an API key value'));
+  }
+}
+
+/**
+ * Form for admin config page.
+ */
+function engage_orgs_form($form, &$form_state) {
+  $form['engage_org_api_key'] = [
+    '#type' => 'textfield',
+    '#title' => t('Change the API key used to communicate to the engage end-point.'),
+    '#field_prefix' => 'Value of API Key: ',
+    '#default_value' => variable_get('engage_org_api_key'),
+  ];
+  return system_settings_form($form);
+}
+
+function _engage_orgs_api($orgID = -1) {
+  $cache = cache_get("engage_org_cache_val_". $orgID, 'cache');
+  if ($cache && !empty($cache->data)) {
+    drupal_json_output($cache->data);
+  } else {
+    $api_key = variable_get("engage_org_api_key", "");
+
+    if (empty($api_key)) {
+      watchdog('engage_orgs', "The API key has not been set, thus breaking the application!", [], WATCHDOG_ERROR);
+      drupal_exit();
+    }
+
+    $url = "https://kent.campuslabs.com/engage/api/Organizations/?status=Active&excludeHiddenOrganizations=true&pageSize=500&key={$api_key}";
+
+    $options = [
+      'method' => 'GET',
+      'timeout' => 15,
+      'headers' => ['Accept' => 'application/json'],
+    ];
+
+    $result = drupal_http_request($url, $options);
+
+    if ($result->code == "200") {
+
+      $feed_json = drupal_json_decode($result->data);
+
+      // loop through all the pages and merge that data back in to process
+      for($i=1; ($i < intval($feed_json["totalPages"])); $i++) {
+        $newPageResults = drupal_http_request("{$url}&page=". ($i + 1), $options);
+        $feed_json["items"] = array_merge($feed_json["items"], drupal_json_decode($newPageResults->data)["items"]);
+      }
+
+      foreach ($feed_json["items"] as $key => &$value) {
+
+        // if /admin/engage/api/orgID then we only show info for that org
+        if ($orgID >= 0) {
+          if ($value["organizationId"] != $orgID) {
+            unset($feed_json["items"][$key]);
+          }
+        }
+
+        // removes the parent orgs
+        if ($value["typeName"] == "Branch") {
+          unset($feed_json["items"][$key]);
+        }
+        else {
+          $value["socialMedia"] = "";
+          foreach (
+            [
+              $value["facebookUrl"],
+              $value["twitterUrl"],
+              $value["flickrFeedUrl"],
+              $value["youtubeChannelUrl"]
+            ]
+            as $mediaLinks) {
+            if (!empty($mediaLinks)) {
+              // if not the first link add a space before hand
+              $value["socialMedia"] .= empty($value["socialMedia"]) ? "" : " ";
+              $value["socialMedia"] .= $mediaLinks;
+            }
+        }
+        $value["description"] .=  $value["summary"];
+        // setting campus location, as it's not passed
+        $value["CampusLocation"] = "Kent";
+        // could just use "parentName" but it would require a SQL computation every time
+        $value["OGGroup"] = 10996;
+        $value["UnsetData"] = "";
+
+        // unfortunately, php doesn't let you unset looped array variables via Pass by Ref ;(
+        unset($feed_json["items"][$key]["facebookUrl"]);
+        unset($feed_json["items"][$key]["twitterUrl"]);
+        unset($feed_json["items"][$key]["flickrFeedUrl"]);
+        unset($feed_json["items"][$key]["youtubeChannelUrl"]);
+      }
+      }
+      cache_set("engage_org_cache_val_" . $orgID, array_values($feed_json["items"]), 'cache', time() + 60 * 60);
+      drupal_json_output(array_values($feed_json["items"]));
+    } else {
+      watchdog('engage_orgs', "The API got an non-200 error code of: " . $result->code, [], WATCHDOG_ERROR);
+    }
+  }
+}

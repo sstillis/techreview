@@ -30,6 +30,7 @@ information.
 CONFIGURATION
 
 1. Enable the module and then configure at admin/config/engage/orgs.
+
 Configurable parameters:
 
 Change the API key used to communicate to the correct Engage platform end-point.

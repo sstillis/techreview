@@ -1,0 +1,3 @@
+'cookie consent display':
+  title: 'Cookie consent do not show for user role'
+  description: 'Do not cookie consent pop-up by authenticated user roles as per previous Drupal module.'

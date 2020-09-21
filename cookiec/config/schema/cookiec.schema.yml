@@ -1,0 +1,16 @@
+cookiec.settings:
+  type: mapping
+  label: Settings
+  mapping:
+    cookiec_message:
+      type: text_format
+    cookiec_link:
+      type: string
+    cookiec_linktext:
+      type: string
+    cookiec_background:
+      type: string
+    cookiec_position:
+      type: string
+    cookiec_dismiss:
+      type: string

@@ -1,0 +1,5 @@
+cookiec.form:
+  route_name: cookiec.form
+  title: 'KSU Cookie Consent'
+  description: 'Uses https://cookieconsent.insites.com/ cookie consent JS'
+  parent: system.admin_config_system

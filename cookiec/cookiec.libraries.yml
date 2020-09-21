@@ -1,0 +1,11 @@
+cookiec:
+  js:
+    js/cookiec.min.js: {}
+    js/cookieconsent.min.js: {}
+  css:
+    theme:
+      css/cookieconsent.min.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings

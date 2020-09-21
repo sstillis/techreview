@@ -1,0 +1,5 @@
+name: 'KSU Cookie Consent'
+description: 'Uses https://cookieconsent.insites.com/ cookie consent JS'
+core: 8.x
+type: module
+dependencies: {  }

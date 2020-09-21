@@ -1,0 +1,61 @@
+<?php
+
+/**
+ * @file
+ * Adds Cookie Consent Block to Pages.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function cookiec_menu() {
+  $items = array();
+  $items['admin/config/system/cookiec'] = array(
+    'title' => 'KSU Cookie Consent',
+    'description' => 'Uses https://cookieconsent.insites.com/ cookie consent JS',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('cookiec_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function cookiec_permission() {
+  return array(
+    'cookie consent display' => array(
+      'title' => t('Cookie consent do not show for user role'),
+      'description' => t('Do not cookie consent pop-up by authenticated user roles as per previous Drupal module.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function cookiec_preprocess(&$vars, $hook) {
+  // @TODO put this line back when done testing
+  //if ($hook == 'page' && !\Drupal::currentUser()->hasPermission('cookie consent display')) {
+  if ($hook == 'page') {
+    $config = \Drupal::config('cookiec.settings');
+
+    $cookiec_message = $config->get('cookiec_message')['value'];
+    $cookiec_message = preg_replace("/\r|\n/", "", $cookiec_message);
+    $cookiec_link = $config->get('cookiec_link');
+    $cookiec_linktext = $config->get('cookiec_linktext');
+    $cookiec_background = $config->get('cookiec_background');
+    $cookiec_position = $config->get('cookiec_position');
+    $cookiec_dismiss = $config->get('cookiec_dismiss');
+    
+    $vars['#attached']['library'][] =  'cookiec/cookiec';
+    $vars['#attached']['drupalSettings']['cookiec']['cookiec_msg'] = $cookiec_message;
+    $vars['#attached']['drupalSettings']['cookiec']['cookiec_link'] = $cookiec_link;
+    $vars['#attached']['drupalSettings']['cookiec']['cookiec_linkmsg'] = $cookiec_linktext;
+    $vars['#attached']['drupalSettings']['cookiec']['cookiec_background'] = $cookiec_background;
+    $vars['#attached']['drupalSettings']['cookiec']['cookiec_position'] = $cookiec_position;
+    $vars['#attached']['drupalSettings']['cookiec']['cookiec_dismiss'] = $cookiec_dismiss;
+  }
+}

@@ -1,0 +1,7 @@
+cookiec.form:
+  path: /admin/config/system/cookiec
+  defaults:
+    _title: 'KSU Cookie Consent'
+    _form: \Drupal\cookiec\Form\CookiecForm
+  requirements:
+    _permission: 'access administration pages'
